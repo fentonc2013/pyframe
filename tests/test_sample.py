@@ -2,29 +2,40 @@
 "Author: Chris Fenton"
 "Contact: fentonc2013@gmail.com"
 
+import pytest
+from utils.data_loader import load_json
 from playwright.sync_api import sync_playwright
-import time
+#import time
 
-def test_text_box_form():
+DATA = load_json("text_box_data.json")
+
+# Use the first record for parameterization
+# FIRST = DATA[0] 
+# @pytest.mark.parametrize("record", [FIRST], ids=[FIRST["name"]])
+
+@pytest.mark.parametrize("record", DATA)
+def test_text_box_form(record):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)  # set to True if you want to hide the browser
         page = browser.new_page()
         page.goto("https://demoqa.com/text-box")
 
         # Fill out the form
-        page.fill("#userName", "Jane Doe")
-        page.fill("#userEmail", "jane@example.com")
-        page.fill("#currentAddress", "123 Test Lane")
-        page.fill("#permanentAddress", "456 Permanent Ave")
+        
+        page.fill("#userName",          record["name"])
+        page.fill("#userEmail",         record["email"])
+        page.fill("#currentAddress",    record["currentAddress"])
+        page.fill("#permanentAddress",  record["permanentAddress"])
 
         # Submit the form
         page.click("#submit")
 
         # Validate output
-        assert "Jane Doe" in page.text_content("#output")
-        assert "jane@example.com" in page.text_content("#output")
-        assert "123 Test Lane" in page.text_content("#output")
-        assert "456 Permanent Ave" in page.text_content("#output")
+        output = page.text_content("#output")
+        assert record["name"]             in output
+        assert record["email"]            in output
+        assert record["currentAddress"]   in output
+        assert record["permanentAddress"] in output
 
         browser.close()
 
