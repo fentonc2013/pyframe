@@ -1,6 +1,7 @@
 import json
 import os
 
+
 def load_json(filename: str):
     """
     Load a JSON file from the data directory.
