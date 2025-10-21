@@ -10,12 +10,13 @@ from utils.data_loader import load_json
 # import time
 
 DATA = load_json("text_box_data.json")
+IDS = [r["name"].replace(" ", "_") for r in DATA]
 # Use the first record for parameterization
 # FIRST = DATA[0]
 # @pytest.mark.parametrize("record", [FIRST], ids=[FIRST["name"]])
 
-
-@pytest.mark.parametrize("record", DATA)
+@pytest.mark.smoke
+@pytest.mark.parametrize("record", DATA, ids=IDS)
 def test_text_box_form(page, record):
     # with sync_playwright() as p:
     # browser = p.chromium.launch(headless=False)  # set to True if you want to hide the browser
@@ -23,22 +24,23 @@ def test_text_box_form(page, record):
     page.goto("https://demoqa.com/text-box")
 
     # Fill out the form
-    page.fill("#userName",          record["name"])
-    page.fill("#userEmail",         record["email"])
-    page.fill("#currentAddress",    record["currentAddress"])
-    page.fill("#permanentAddress",  record["permanentAddress"])
+    page.fill("#userName", record["name"])
+    page.fill("#userEmail", record["email"])
+    page.fill("#currentAddress", record["currentAddress"])
+    page.fill("#permanentAddress", record["permanentAddress"])
 
     # Submit the form
     page.click("#submit")
 
     # Validate output
     output = page.text_content("#output")
-    assert record["name"]             in output
-    assert record["email"]            in output
-    assert record["currentAddress"]   in output
+    assert record["name"] in output
+    assert record["email"] in output
+    assert record["currentAddress"] in output
     assert record["permanentAddress"] in output
 
 
+@pytest.mark.smoke
 def test_check_box(page):
     page.goto("https://demoqa.com/checkbox")
 
@@ -71,9 +73,6 @@ def test_add_web_table_entry(page):
 
     # Submit the form
     page.get_by_role("button", name="Submit").click()
-
-    # Wait the print
-    # time.sleep(3)
 
     # Confirm the new row contains the added user
     assert page.locator(".rt-td", has_text="Jane").first.is_visible()

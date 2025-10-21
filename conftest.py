@@ -1,32 +1,53 @@
-import json
+# conftest.py
 import os
-import pytest
 from pathlib import Path
-from playwright.sync_api import sync_playwright, Browser, Page
+import pytest
+from playwright.sync_api import sync_playwright
 
-# Load config JSON from the 'data' directory
-CONFIG_PATH = Path(__file__).resolve().parent / "data" / "config.json"
-with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-    CONFIG = json.load(f)
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, "rep_" + rep.when, rep)
+
+
+def _failed(request) -> bool:
+    rep = getattr(request.node, "rep_call", None)
+    return bool(rep and rep.failed)
+
+
+BROWSER = os.getenv("BROWSER", "chromium")
+HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
+TRACE_ON_FAIL = os.getenv("TRACE_ON_FAIL", "true").lower() == "true"
 
 
 @pytest.fixture(scope="session")
 def browser():
-    browser_type = CONFIG.get("browser", "chromium")
-    headless_mode = CONFIG.get("headless", True)
-
     with sync_playwright() as p:
-        try:
-            browser = getattr(p, browser_type).launch(headless=headless_mode)
-        except AttributeError:
-            raise ValueError(f"Browser type '{browser_type}' is not supported.")
-        yield browser
-        browser.close()
+        b = getattr(p, BROWSER).launch(headless=HEADLESS)
+        yield b
+        b.close()
 
 
 @pytest.fixture
-def page(browser):
+def page(browser, request, tmp_path_factory):
     context = browser.new_context()
+
+    # start tracing up-front if we may want a failure trace
+    if TRACE_ON_FAIL:
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
     page = context.new_page()
     yield page
+
+    # save trace only on failure; otherwise discard
+    if TRACE_ON_FAIL:
+        if _failed(request):
+            out_dir = tmp_path_factory.mktemp("traces")
+            trace_path = Path(out_dir) / f"{request.node.name}.zip"
+            context.tracing.stop(path=str(trace_path))
+        else:
+            context.tracing.stop()
+
     context.close()
