@@ -13,5 +13,7 @@ It’s a personal project focused on applying modern QA engineering principles t
 - **CI/CD friendly** — structured to plug into build pipelines with minimal setup  
 - **Logging and reporting** — extensible hooks for future reporting and analytics integration  
 
+## 📜 License
 
-
+PyFrame is licensed under the Apache License 2.0.  
+See the [LICENSE](LICENSE) file for details.
