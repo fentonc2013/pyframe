@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------
-# Test cases for learning various web interactions using Playwright
+# Test cases for various web interactions using Playwright
 # Author: Chris Fenton
 # Contact: fentonc2013@gmail.com
 # -----------------------------------------------------------------
@@ -11,17 +11,16 @@ from utils.data_loader import load_json
 
 DATA = load_json("text_box_data.json")
 IDS = [r["name"].replace(" ", "_") for r in DATA]
-# Use the first record for parameterization
-# FIRST = DATA[0]
-# @pytest.mark.parametrize("record", [FIRST], ids=[FIRST["name"]])
+
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("record", DATA, ids=IDS)
-def test_text_box_form(page, record):
-    # with sync_playwright() as p:
-    # browser = p.chromium.launch(headless=False)  # set to True if you want to hide the browser
-    # page = browser.new_page()
-    page.goto("https://demoqa.com/text-box")
+def test_text_box_form(page, record, config):
+    """Test filling out and submitting the text box form."""
+
+    # Use config fixture to get URL
+    base_url = config["base_url"]
+    page.goto(f"{base_url}/text-box")
 
     # Fill out the form
     page.fill("#userName", record["name"])
@@ -41,8 +40,12 @@ def test_text_box_form(page, record):
 
 
 @pytest.mark.smoke
-def test_check_box(page):
-    page.goto("https://demoqa.com/checkbox")
+def test_check_box(page, config):
+    """Test selecting checkboxes and validating the result."""
+
+    # Use config fixture to get URL
+    base_url = config["base_url"]
+    page.goto(f"{base_url}/checkbox")
 
     # Expand all checkboxes
     page.click("button[title='Expand all']")
@@ -57,7 +60,13 @@ def test_check_box(page):
     assert "desktop" in result_text.lower()
 
 
-def test_add_web_table_entry(page):
+def test_add_web_table_entry(page, config):
+    """Test adding, editing, and deleting an entry in the web table."""
+
+    # Use config fixture to get URL
+    base_url = config["base_url"]
+    page.goto(f"{base_url}/checkbox")
+
     page.goto("https://demoqa.com/webtables")
 
     # Click the "Add" button

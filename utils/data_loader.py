@@ -10,3 +10,10 @@ def load_json(filename: str):
     data_path = os.path.join(base_dir, "data", filename)
     with open(data_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def get_config():
+    """
+    Load global configuration.
+    """
+    return load_json("config.json")

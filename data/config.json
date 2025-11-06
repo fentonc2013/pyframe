@@ -1,4 +1,6 @@
 {
+    "env": "demo",
+    "base_url": "https://demoqa.com",
     "browser": "firefox",
     "headless": true
 }

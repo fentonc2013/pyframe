@@ -1,8 +1,8 @@
 # conftest.py
 import os
-from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright
+from utils.data_loader import get_config
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
@@ -12,42 +12,59 @@ def pytest_runtest_makereport(item, call):
     setattr(item, "rep_" + rep.when, rep)
 
 
-def _failed(request) -> bool:
-    rep = getattr(request.node, "rep_call", None)
-    return bool(rep and rep.failed)
-
-
-BROWSER = os.getenv("BROWSER", "chromium")
-HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
-TRACE_ON_FAIL = os.getenv("TRACE_ON_FAIL", "true").lower() == "true"
+@pytest.fixture(scope="session")
+def config():
+    """Load and provide configuration from config.json."""
+    return get_config()
 
 
 @pytest.fixture(scope="session")
 def browser():
+    """Initialize browser settings from config.json"""
     with sync_playwright() as p:
-        b = getattr(p, BROWSER).launch(headless=HEADLESS)
-        yield b
-        b.close()
+        browser_type = get_config().get("browser", "chromium")
+        headless = get_config().get("headless", True)
+        browser = getattr(p, browser_type).launch(headless=headless)
+        yield browser
+        browser.close()
 
 
 @pytest.fixture
-def page(browser, request, tmp_path_factory):
-    context = browser.new_context()
+def page(browser, config, request):
+    """New playwright page for each test."""
+    base_output = os.path.join(os.getcwd(), "output")
+    trace_dir = os.path.join(base_output, "traces")
+    screenshot_dir = os.path.join(base_output, "screenshots")
 
-    # start tracing up-front if we may want a failure trace
-    if TRACE_ON_FAIL:
+    os.makedirs(trace_dir, exist_ok=True)
+    os.makedirs(screenshot_dir, exist_ok=True)
+
+    context = browser.new_context()
+    page = context.new_page()
+
+    trace_on_fail = config.get("trace_on_fail", True)
+    screenshot_on_fail = config.get("screenshot_on_fail", True)
+
+    if trace_on_fail:
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-    page = context.new_page()
     yield page
 
-    # save trace only on failure; otherwise discard
-    if TRACE_ON_FAIL:
-        if _failed(request):
-            out_dir = tmp_path_factory.mktemp("traces")
-            trace_path = Path(out_dir) / f"{request.node.name}.zip"
-            context.tracing.stop(path=str(trace_path))
-        else:
+    # Handle test failures cleanly
+    if hasattr(request.node, "rep_call") and request.node.rep_call.failed:
+        test_name = request.node.name.replace("/", "_")
+
+        if trace_on_fail:
+            trace_path = f"traces/{test_name}_trace.zip"
+            context.tracing.stop(path=trace_path)
+            print(f"Saved trace: {trace_path}")
+
+        if screenshot_on_fail:
+            screenshot_path = f"screenshots/{test_name}.png"
+            page.screenshot(path=screenshot_path)
+            print(f"Saved screenshot: {screenshot_path}")
+    else:
+        if trace_on_fail:
             context.tracing.stop()
 
     context.close()

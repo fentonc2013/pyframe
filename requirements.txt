@@ -1,2 +1,9 @@
+# Core dependencies for the testing framework
 pytest
+pytest-html
+pytest-xdist
+pytest-order
+
+# Web testing with Playwright
 playwright
+
